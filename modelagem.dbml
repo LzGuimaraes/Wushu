@@ -1,0 +1,150 @@
+Table users {
+  id uuid [pk]
+
+  name varchar
+  email varchar [unique]
+  password varchar
+
+  role enum(
+    'admin',
+    'student'
+  )
+
+  status enum(
+    'pending',      
+    'active',       // Pode utilizar o sistema
+    'inactive',     // Bloqueado
+    'suspended'     // Suspenso temporariamente
+  )
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table student_profiles {
+  id uuid [pk]
+
+  user_id uuid [ref: > users.id, unique]
+
+  cpf varchar [unique]
+  phone varchar
+  birth_date date
+
+  emergency_contact varchar
+  medical_notes text
+
+  belt varchar
+
+  address varchar
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table enrollments {
+  id uuid [pk]
+
+  student_id uuid [ref: > student_profiles.id]
+
+  enrollment_number varchar [unique]
+
+  status enum(
+    'pending',
+    'active',
+    'cancelled',
+    'finished'
+  )
+
+  registration_date date
+  start_date date
+  end_date date
+
+  notes text
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table classes {
+  id uuid [pk]
+
+  instructor_id uuid [ref: > users.id]
+
+  name varchar
+  description text
+
+  schedule varchar
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table student_classes {
+  id uuid [pk]
+
+  enrollment_id uuid [ref: > enrollments.id]
+  class_id uuid [ref: > classes.id]
+
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (enrollment_id, class_id) [unique]
+  }
+}
+
+Table payments {
+  id uuid [pk]
+
+  enrollment_id uuid [ref: > enrollments.id]
+
+  amount decimal(10,2)
+
+  competence date
+
+  due_date date
+
+  payment_date date
+
+  payment_method enum(
+    'pix',
+    'cash',
+    'credit_card',
+    'debit_card'
+  )
+
+  status enum(
+    'pending',
+    'paid',
+    'overdue',
+    'cancelled'
+  )
+
+  notes text
+
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (enrollment_id, competence) [unique]
+  }
+}
+
+Table attendance {
+  id uuid [pk]
+
+  enrollment_id uuid [ref: > enrollments.id]
+
+  class_id uuid [ref: > classes.id]
+
+  attendance_date date
+
+  present boolean [default: true]
+
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (enrollment_id, class_id, attendance_date) [unique]
+  }
+}
