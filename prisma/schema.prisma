@@ -12,9 +12,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==============================
+// Enums
+// ==============================
+
 enum UserRole {
   ADMIN
-  INSTRUCTOR
   STUDENT
 }
 
@@ -24,6 +27,54 @@ enum UserStatus {
   INACTIVE
   SUSPENDED
 }
+
+enum StudentGoal {
+  FITNESS
+  COMPETITION
+  SELF_DEFENSE
+  LEISURE
+  OTHER
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  CANCELLED
+  FINISHED
+}
+
+enum PaymentMethod {
+  PIX
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum NotificationType {
+  REGISTRATION
+  PAYMENT_REMINDER
+  PAYMENT_CONFIRMED
+  ENROLLMENT_APPROVED
+  PASSWORD_RESET
+  GENERAL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ==============================
+// Models
+// ==============================
 
 model User {
   id       String @id @default(uuid())
@@ -37,5 +88,239 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  studentProfile    StudentProfile?
+  instructorClasses Class[]         @relation("InstructorClasses")
+  notifications     Notification[]
+
   @@map("users")
+}
+
+model StudentProfile {
+  id String @id @default(uuid())
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  cpf       String    @unique
+  birthDate DateTime? @map("birth_date") @db.Date
+
+  phone            String
+  responsiblePhone String? @map("responsible_phone")
+
+  address  String
+  district String
+  city     String
+  zipCode  String @map("zip_code")
+
+  emergencyContact String? @map("emergency_contact")
+
+  belt             String?
+  trainingModality String  @map("training_modality")
+
+  hasPreviousMartialArt Boolean @default(false) @map("has_previous_martial_art")
+  previousMartialArt    String? @map("previous_martial_art")
+
+  goal            StudentGoal
+  goalDescription String?     @map("goal_description")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  medicalRecord MedicalRecord?
+  guardians     Guardian[]
+  beltHistory   BeltHistory[]
+  enrollments   Enrollment[]
+
+  @@map("student_profiles")
+}
+
+model MedicalRecord {
+  id String @id @default(uuid())
+
+  studentProfileId String         @unique @map("student_profile_id")
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+
+  hasDisease         Boolean @default(false) @map("has_disease")
+  diseaseDescription String? @map("disease_description")
+
+  usesMedication        Boolean @default(false) @map("uses_medication")
+  medicationDescription String? @map("medication_description")
+
+  hasPhysicalLimitation         Boolean @default(false) @map("has_physical_limitation")
+  physicalLimitationDescription String? @map("physical_limitation_description")
+
+  hasAllergy         Boolean @default(false) @map("has_allergy")
+  allergyDescription String? @map("allergy_description")
+
+  hasPreviousInjury         Boolean @default(false) @map("has_previous_injury")
+  previousInjuryDescription String? @map("previous_injury_description")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("medical_records")
+}
+
+model Guardian {
+  id String @id @default(uuid())
+
+  studentProfileId String         @map("student_profile_id")
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+
+  name  String
+  cpf   String
+  phone String
+
+  signatureUrl String? @map("signature_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("guardians")
+}
+
+model BeltHistory {
+  id String @id @default(uuid())
+
+  studentProfileId String         @map("student_profile_id")
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+
+  belt String
+
+  graduationDate DateTime? @map("graduation_date") @db.Date
+
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("belt_history")
+}
+
+model Enrollment {
+  id String @id @default(uuid())
+
+  studentId String         @map("student_id")
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+
+  enrollmentNumber String @unique @map("enrollment_number")
+
+  status EnrollmentStatus @default(PENDING)
+
+  registrationDate DateTime  @map("registration_date") @db.Date
+  startDate        DateTime? @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  studentClasses StudentClass[]
+  attendances    Attendance[]
+  payments       Payment[]
+
+  @@map("enrollments")
+}
+
+model Class {
+  id String @id @default(uuid())
+
+  instructorId String @map("instructor_id")
+  instructor   User   @relation("InstructorClasses", fields: [instructorId], references: [id])
+
+  name        String
+  description String?
+  schedule    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  studentClasses StudentClass[]
+  attendances    Attendance[]
+
+  @@map("classes")
+}
+
+model StudentClass {
+  id String @id @default(uuid())
+
+  enrollmentId String     @map("enrollment_id")
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+
+  classId String @map("class_id")
+  class   Class  @relation(fields: [classId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([enrollmentId, classId])
+  @@map("student_classes")
+}
+
+model Attendance {
+  id String @id @default(uuid())
+
+  enrollmentId String     @map("enrollment_id")
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+
+  classId String @map("class_id")
+  class   Class  @relation(fields: [classId], references: [id])
+
+  attendanceDate DateTime @map("attendance_date") @db.Date
+
+  present Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([enrollmentId, classId, attendanceDate])
+  @@map("attendance")
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  enrollmentId String     @map("enrollment_id")
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+
+  amount Decimal @db.Decimal(10, 2)
+
+  competence  DateTime  @db.Date
+  dueDate     DateTime  @map("due_date") @db.Date
+  paymentDate DateTime? @map("payment_date") @db.Date
+
+  paymentMethod PaymentMethod @map("payment_method")
+
+  status PaymentStatus @default(PENDING)
+
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([enrollmentId, competence])
+  @@map("payments")
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  type NotificationType
+
+  subject String
+  body    String
+
+  status NotificationStatus @default(PENDING)
+
+  sentAt DateTime? @map("sent_at")
+
+  errorMessage String? @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("notifications")
 }
