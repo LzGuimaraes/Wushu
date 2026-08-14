@@ -1,0 +1,7 @@
+export enum StudentGoal {
+  FITNESS = 'FITNESS',
+  COMPETITION = 'COMPETITION',
+  SELF_DEFENSE = 'SELF_DEFENSE',
+  LEISURE = 'LEISURE',
+  OTHER = 'OTHER',
+}
