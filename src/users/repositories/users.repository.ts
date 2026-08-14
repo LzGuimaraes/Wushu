@@ -11,4 +11,6 @@ export abstract class UsersRepository {
     abstract update(id: string, data: UpdateUserDto): Promise<UserEntity | null>;
 
     abstract remove(id:string): Promise<void>;
+
+    abstract markEmailVerified(id: string): Promise<UserEntity | null>;
 }

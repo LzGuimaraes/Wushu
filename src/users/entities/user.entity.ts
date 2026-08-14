@@ -8,6 +8,7 @@ export class UserEntity{
     password: string;
     role: UserRole;
     status: UserStatus;
+    emailVerifiedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     

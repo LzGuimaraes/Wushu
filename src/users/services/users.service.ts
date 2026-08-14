@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 import { UsersRepository } from '../repositories/users.repository';
@@ -33,5 +33,13 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     await this.usersRepository.remove(id);
+  }
+
+  async markEmailVerified(id: string): Promise<UserEntity> {
+    const user = await this.usersRepository.markEmailVerified(id);
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+    return user;
   }
 }

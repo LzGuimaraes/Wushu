@@ -55,6 +55,21 @@ export class PrismaUsersRepository extends UsersRepository {
     }
   }
 
+  async markEmailVerified(id: string): Promise<UserEntity | null> {
+    try {
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: { emailVerifiedAt: new Date() },
+      });
+      return this.toEntity(user);
+    } catch (error) {
+      if (this.isNotFoundError(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   private toEntity(user: User): UserEntity {
     return Object.assign(new UserEntity(), user);
   }
