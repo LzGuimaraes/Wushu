@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { NotificationsModule } from '../notifications/notifications.module';
 import {UsersController} from './controllers/users.controller';
 import {UsersService} from './services/users.service';
 
@@ -7,6 +8,7 @@ import {UsersRepository} from './repositories/users.repository';
 import {PrismaUsersRepository} from './repositories/prisma-users.repository';
 
 @Module({
+    imports: [NotificationsModule],
     controllers: [UsersController],
     providers: [
         UsersService,

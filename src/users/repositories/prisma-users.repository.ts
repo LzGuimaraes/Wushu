@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
-import { UsersRepository } from './users.repository';
+import { UserStatus } from '../../common/enums/user-status.enum';
+import { UsersRepository, PendingRegistration } from './users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserEntity } from '../entities/user.entity';
@@ -68,6 +69,64 @@ export class PrismaUsersRepository extends UsersRepository {
       }
       throw error;
     }
+  }
+
+  async updateStatus(
+    id: string,
+    status: UserStatus,
+  ): Promise<UserEntity | null> {
+    try {
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: { status },
+      });
+      return this.toEntity(user);
+    } catch (error) {
+      if (this.isNotFoundError(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async updateManyStatus(
+    ids: string[],
+    status: UserStatus,
+  ): Promise<number> {
+    if (ids.length === 0) return 0;
+    const result = await this.prisma.user.updateMany({
+      where: { id: { in: ids }, status: { not: status } },
+      data: { status },
+    });
+    return result.count;
+  }
+
+  async findPendingRegistrations(): Promise<PendingRegistration[]> {
+    const users = await this.prisma.user.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        studentProfile: {
+          select: { id: true, phone: true, belt: true, goal: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      createdAt: user.createdAt,
+      studentProfile: user.studentProfile
+        ? {
+            id: user.studentProfile.id,
+            phone: user.studentProfile.phone,
+            belt: user.studentProfile.belt,
+            goal: user.studentProfile.goal,
+          }
+        : null,
+    }));
   }
 
   private toEntity(user: User): UserEntity {
