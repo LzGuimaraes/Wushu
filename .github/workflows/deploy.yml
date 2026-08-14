@@ -76,6 +76,9 @@ jobs:
               -l 'traefik.http.services.api.loadbalancer.healthcheck.interval=30s' \
               ${{ env.IMAGE }}:latest
 
+            # Conecta na rede do Traefik para o roteamento funcionar
+            docker network connect proxy api || true
+
             echo "==> [4/4] Status do container"
             sleep 5
             docker ps --filter name=api --format 'table {{.Names}}\t{{.Status}}'
