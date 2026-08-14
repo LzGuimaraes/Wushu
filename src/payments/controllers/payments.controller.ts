@@ -74,9 +74,12 @@ export class PaymentsController {
 
   @Post(':id/confirm')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  confirm(@Param('id') id: string) {
-    return this.paymentsService.confirm(id);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  confirm(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.paymentsService.confirmAs(user, id);
   }
 
   @Delete(':id')
