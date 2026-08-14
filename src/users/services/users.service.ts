@@ -28,7 +28,11 @@ export class UsersService {
   }
 
   async update(id: string, data: UpdateUserDto): Promise<UserEntity | null> {
-    return this.usersRepository.update(id, data);
+    const payload = { ...data };
+    if (payload.password) {
+      payload.password = await bcrypt.hash(payload.password, 10);
+    }
+    return this.usersRepository.update(id, payload);
   }
 
   async remove(id: string): Promise<void> {

@@ -19,7 +19,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     switch (exception.code) {
       case 'P2002':
         status = HttpStatus.CONFLICT;
-        message = 'Registro duplicado';
+        message = 'Já existe um registro com esses dados';
         break;
       case 'P2025':
         status = HttpStatus.NOT_FOUND;
@@ -27,7 +27,8 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         break;
       case 'P2003':
         status = HttpStatus.BAD_REQUEST;
-        message = 'Violação de chave estrangeira';
+        message =
+          'Este registro está vinculado a outros cadastros e não pode ser alterado ou excluído';
         break;
     }
 

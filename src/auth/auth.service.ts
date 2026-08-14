@@ -1,9 +1,17 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/services/users.service';
-import { UserEntity } from '../users/entities/user.entity';
+import {
+  PublicUser,
+  UserEntity,
+  toPublicUser,
+} from '../users/entities/user.entity';
 import { MailService } from '../mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -25,7 +33,9 @@ export class AuthService {
     this.appUrl = process.env.APP_URL ?? 'http://localhost:3000';
   }
 
-  async login(dto: LoginDto): Promise<{ accessToken: string; user: UserEntity }> {
+  async login(
+    dto: LoginDto,
+  ): Promise<{ accessToken: string; user: PublicUser }> {
     const user = await this.usersService.findByEmail(dto.email);
 
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {
@@ -40,14 +50,19 @@ export class AuthService {
 
     return {
       accessToken: await this.jwtService.signAsync(payload),
-      user,
+      user: toPublicUser(user),
     };
   }
 
-  async register(dto: RegisterDto): Promise<{ user: UserEntity; message: string }> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ user: PublicUser; message: string }> {
     const user = await this.usersService.create(dto);
     await this.sendConfirmationEmail(user);
-    return { user, message: 'Conta criada. Enviamos um e-mail de confirmação.' };
+    return {
+      user: toPublicUser(user),
+      message: 'Conta criada. Enviamos um e-mail de confirmação.',
+    };
   }
 
   async confirmEmail(token: string): Promise<{ message: string }> {
