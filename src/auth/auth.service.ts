@@ -13,6 +13,8 @@ import {
   toPublicUser,
 } from '../users/entities/user.entity';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../common/enums/notification-type.enum';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -29,6 +31,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.appUrl = process.env.APP_URL ?? 'http://localhost:3000';
   }
@@ -42,10 +45,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    if (!user.emailVerifiedAt) {
-      throw new UnauthorizedException('Confirme seu e-mail antes de entrar');
-    }
-
     const payload = { sub: user.id, email: user.email, role: user.role };
 
     return {
@@ -56,12 +55,20 @@ export class AuthService {
 
   async register(
     dto: RegisterDto,
-  ): Promise<{ user: PublicUser; message: string }> {
+  ): Promise<{ accessToken: string; user: PublicUser; message: string }> {
     const user = await this.usersService.create(dto);
     await this.sendConfirmationEmail(user);
+    await this.notificationsService.notifyAdmins(
+      NotificationType.REGISTRATION,
+      'Novo cadastro aguardando aprovação',
+      `O aluno "${user.name}" (${user.email}) se cadastrou e aguarda sua aprovação.`,
+    );
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
     return {
+      accessToken: await this.jwtService.signAsync(payload),
       user: toPublicUser(user),
-      message: 'Conta criada. Enviamos um e-mail de confirmação.',
+      message: 'Conta criada. Aguardando aprovação do professor.',
     };
   }
 
