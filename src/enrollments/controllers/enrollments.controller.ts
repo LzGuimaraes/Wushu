@@ -31,7 +31,7 @@ export class EnrollmentsController {
   @UseGuards(JwtAuthGuard)
   async findMine(@CurrentUser() user: AuthenticatedUser) {
     const profile = await this.studentProfilesService.findByUserId(user.userId);
-    return this.enrollmentsService.findByStudentId(profile.id);
+    return this.enrollmentsService.findMineWithClasses(profile.id);
   }
 
   @Post()

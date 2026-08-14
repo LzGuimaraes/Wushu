@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { EnrollmentsRepository } from '../repositories/enrollments.repository';
+import {
+  EnrollmentsRepository,
+  EnrollmentWithClasses,
+} from '../repositories/enrollments.repository';
 import { CreateEnrollmentDto } from '../dto/create-enrollment.dto';
 import { UpdateEnrollmentDto } from '../dto/update-enrollment.dto';
 import { EnrollmentEntity } from '../entities/enrollment.entity';
@@ -19,6 +22,11 @@ export class EnrollmentsService {
 
   async findByStudentId(studentId: string): Promise<EnrollmentEntity[]> {
     return this.enrollmentsRepository.findByStudentId(studentId);
+  }
+
+  /** Matrículas do usuário com as turmas associadas (Minhas turmas). */
+  async findMineWithClasses(studentId: string): Promise<EnrollmentWithClasses[]> {
+    return this.enrollmentsRepository.findByStudentIdWithClasses(studentId);
   }
 
   async findOne(id: string): Promise<EnrollmentEntity> {

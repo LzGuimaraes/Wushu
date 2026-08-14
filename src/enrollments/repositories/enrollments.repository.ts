@@ -7,6 +7,24 @@ import { EnrollmentEntity } from '../entities/enrollment.entity';
 import { CreateEnrollmentDto } from '../dto/create-enrollment.dto';
 import { UpdateEnrollmentDto } from '../dto/update-enrollment.dto';
 
+export interface EnrollmentWithClasses {
+  id: string;
+  enrollmentNumber: string;
+  status: string;
+  registrationDate: Date;
+  startDate: Date | null;
+  endDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  classes: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    schedule: string | null;
+    instructor: { id: string; name: string };
+  }>;
+}
+
 @Injectable()
 export class EnrollmentsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -35,6 +53,50 @@ export class EnrollmentsRepository {
       where: { id },
     });
     return enrollment ? this.toEntity(enrollment) : null;
+  }
+
+  /**
+   * Matrículas do aluno incluindo as turmas em que está matriculado
+   * (e o nome do instrutor de cada turma) — usado em "Minhas turmas".
+   */
+  async findByStudentIdWithClasses(
+    studentId: string,
+  ): Promise<EnrollmentWithClasses[]> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { studentId },
+      include: {
+        studentClasses: {
+          include: {
+            class: {
+              include: {
+                instructor: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return enrollments.map((e) => ({
+      id: e.id,
+      enrollmentNumber: e.enrollmentNumber,
+      status: e.status,
+      registrationDate: e.registrationDate,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+      classes: e.studentClasses.map((sc) => ({
+        id: sc.class.id,
+        name: sc.class.name,
+        description: sc.class.description,
+        schedule: sc.class.schedule,
+        instructor: {
+          id: sc.class.instructor.id,
+          name: sc.class.instructor.name,
+        },
+      })),
+    }));
   }
 
   async update(
