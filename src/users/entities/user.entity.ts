@@ -11,7 +11,7 @@ export class UserEntity{
     createdAt: Date;
     updatedAt: Date;
     
-    constructor(partial:<UserENteity>) {
+    constructor(partial: Partial<UserEntity> = {}) {
         Object.assign(this, partial);
     }
 }
