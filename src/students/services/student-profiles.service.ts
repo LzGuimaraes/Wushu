@@ -35,6 +35,22 @@ export class StudentProfilesService {
     return profile;
   }
 
+  /** Atualiza o perfil do próprio usuário logado (PATCH /students/me). */
+  async updateByUserId(
+    userId: string,
+    dto: UpdateStudentProfileDto,
+  ): Promise<StudentProfileEntity> {
+    const profile = await this.studentProfilesRepository.findByUserId(userId);
+    if (!profile) {
+      throw new NotFoundException('Perfil de aluno não encontrado');
+    }
+    const updated = await this.studentProfilesRepository.update(profile.id, dto);
+    if (!updated) {
+      throw new NotFoundException('Perfil de aluno não encontrado');
+    }
+    return updated;
+  }
+
   async update(
     id: string,
     dto: UpdateStudentProfileDto,

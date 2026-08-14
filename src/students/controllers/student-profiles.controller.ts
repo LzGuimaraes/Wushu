@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -41,6 +43,15 @@ export class StudentProfilesController {
     return this.studentProfilesService.findByUserId(user.userId);
   }
 
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateMyProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateStudentProfileDto,
+  ) {
+    return this.studentProfilesService.updateByUserId(user.userId, dto);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -57,13 +68,24 @@ export class StudentProfilesController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id') id: string) {
-    return this.studentProfilesService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const profile = await this.studentProfilesService.findOne(id);
+    this.assertOwnOrAdmin(profile.userId, user);
+    return profile;
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateStudentProfileDto) {
+  async update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateStudentProfileDto,
+  ) {
+    const profile = await this.studentProfilesService.findOne(id);
+    this.assertOwnOrAdmin(profile.userId, user);
     return this.studentProfilesService.update(id, dto);
   }
 
@@ -72,5 +94,14 @@ export class StudentProfilesController {
   @Roles(UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.studentProfilesService.remove(id);
+  }
+
+  /** Proteção contra IDOR: apenas o dono do perfil ou um admin podem acessar. */
+  private assertOwnOrAdmin(ownerUserId: string, user: AuthenticatedUser) {
+    if (ownerUserId !== user.userId && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'Você não tem permissão para acessar este perfil',
+      );
+    }
   }
 }
