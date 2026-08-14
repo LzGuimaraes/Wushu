@@ -9,6 +9,9 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { ClassesModule } from './classes/classes.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { PaymentsModule } from './payments/payments.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { PublicModule } from './public/public.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { PaymentsModule } from './payments/payments.module';
     ClassesModule,
     AttendanceModule,
     PaymentsModule,
+    NotificationsModule,
+    PublicModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
