@@ -36,9 +36,12 @@ export class EnrollmentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  create(@Body() dto: CreateEnrollmentDto) {
-    return this.enrollmentsService.create(dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateEnrollmentDto,
+  ) {
+    return this.enrollmentsService.create(user, dto);
   }
 
   @Get()

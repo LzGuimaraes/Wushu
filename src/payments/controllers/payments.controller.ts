@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -33,7 +34,9 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   async findMine(@CurrentUser() user: AuthenticatedUser) {
     const profile = await this.studentProfilesService.findByUserId(user.userId);
-    const enrollments = await this.enrollmentsService.findByStudentId(profile.id);
+    const enrollments = await this.enrollmentsService.findByStudentId(
+      profile.id,
+    );
     return this.paymentsService.findByEnrollmentIds(
       enrollments.map((enrollment) => enrollment.id),
     );
@@ -41,9 +44,23 @@ export class PaymentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  create(@Body() dto: CreatePaymentDto) {
-    return this.paymentsService.create(dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.paymentsService.create(user, dto);
+  }
+
+  /** Gera mensalidades pendentes do mês (ADMIN ou instrutor). */
+  @Post('generate-month')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  generateMonth(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('month') month?: string,
+  ) {
+    return this.paymentsService.generateMonthlyPaymentsFor(user, month);
   }
 
   @Get()
@@ -67,18 +84,19 @@ export class PaymentsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdatePaymentDto) {
-    return this.paymentsService.update(id, dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdatePaymentDto,
+  ) {
+    return this.paymentsService.update(user, id, dto);
   }
 
   @Post(':id/confirm')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STUDENT)
-  confirm(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  confirm(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.paymentsService.confirmAs(user, id);
   }
 

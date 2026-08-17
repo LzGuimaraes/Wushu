@@ -7,8 +7,13 @@ import {
 } from 'class-validator';
 
 export class CreateClassDto {
+  /**
+   * Obrigatório apenas quando quem cria é ADMIN.
+   * Instrutor tem o próprio id definido automaticamente no servidor.
+   */
+  @IsOptional()
   @IsUUID()
-  instructorId: string;
+  instructorId?: string;
 
   @IsNotEmpty()
   @IsString()

@@ -1,5 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { PrismaService } from '../../database/prisma/prisma.service';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { assertAdminOrInstructor } from '../../common/utils/authorization.util';
+import {
+  currentMonth,
+  generatePendingMonthlyPayments,
+} from '../../common/utils/monthly-payments.util';
+import { EnrollmentStatus } from '../../common/enums/enrollment-status.enum';
 import {
   EnrollmentsRepository,
   EnrollmentWithClasses,
@@ -10,10 +18,25 @@ import { EnrollmentEntity } from '../entities/enrollment.entity';
 
 @Injectable()
 export class EnrollmentsService {
-  constructor(private readonly enrollmentsRepository: EnrollmentsRepository) {}
+  constructor(
+    private readonly enrollmentsRepository: EnrollmentsRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async create(dto: CreateEnrollmentDto): Promise<EnrollmentEntity> {
-    return this.enrollmentsRepository.create(dto);
+  /** ADMIN ou instrutor cria matrícula; matrícula já ATIVA gera mensalidade do mês. */
+  async create(
+    user: AuthenticatedUser,
+    dto: CreateEnrollmentDto,
+  ): Promise<EnrollmentEntity> {
+    await assertAdminOrInstructor(this.prisma.class, user);
+
+    const enrollment = await this.enrollmentsRepository.create(dto);
+    if (enrollment.status === EnrollmentStatus.ACTIVE) {
+      await generatePendingMonthlyPayments(this.prisma, currentMonth(), {
+        enrollmentId: enrollment.id,
+      });
+    }
+    return enrollment;
   }
 
   async findAll(): Promise<EnrollmentEntity[]> {
@@ -25,7 +48,9 @@ export class EnrollmentsService {
   }
 
   /** Matrículas do usuário com as turmas associadas (Minhas turmas). */
-  async findMineWithClasses(studentId: string): Promise<EnrollmentWithClasses[]> {
+  async findMineWithClasses(
+    studentId: string,
+  ): Promise<EnrollmentWithClasses[]> {
     return this.enrollmentsRepository.findByStudentIdWithClasses(studentId);
   }
 
@@ -37,7 +62,10 @@ export class EnrollmentsService {
     return enrollment;
   }
 
-  async update(id: string, dto: UpdateEnrollmentDto): Promise<EnrollmentEntity> {
+  async update(
+    id: string,
+    dto: UpdateEnrollmentDto,
+  ): Promise<EnrollmentEntity> {
     const enrollment = await this.enrollmentsRepository.update(id, dto);
     if (!enrollment) {
       throw new NotFoundException('Matrícula não encontrada');
@@ -45,8 +73,13 @@ export class EnrollmentsService {
     return enrollment;
   }
 
+  /** Aprova a matrícula (ativa aluno e matrícula) e gera a mensalidade do mês. */
   async approve(id: string): Promise<EnrollmentEntity> {
-    return this.enrollmentsRepository.approve(id);
+    const enrollment = await this.enrollmentsRepository.approve(id);
+    await generatePendingMonthlyPayments(this.prisma, currentMonth(), {
+      enrollmentId: enrollment.id,
+    });
+    return enrollment;
   }
 
   async remove(id: string): Promise<void> {

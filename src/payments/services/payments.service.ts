@@ -7,6 +7,11 @@ import {
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { assertAdminOrInstructor } from '../../common/utils/authorization.util';
+import {
+  currentMonth,
+  generatePendingMonthlyPayments,
+} from '../../common/utils/monthly-payments.util';
 import { PaymentsRepository } from '../repositories/payments.repository';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { UpdatePaymentDto } from '../dto/update-payment.dto';
@@ -19,7 +24,36 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(dto: CreatePaymentDto): Promise<PaymentEntity> {
+  /**
+   * ADMIN gerencia qualquer mensalidade; instrutor apenas mensalidades de
+   * matrículas vinculadas às suas próprias turmas.
+   */
+  private async assertCanManage(
+    user: AuthenticatedUser,
+    enrollmentId?: string,
+  ): Promise<void> {
+    await assertAdminOrInstructor(this.prisma.class, user);
+
+    if (user.role !== UserRole.ADMIN && enrollmentId) {
+      const linked = await this.prisma.studentClass.count({
+        where: {
+          enrollmentId,
+          class: { instructorId: user.userId },
+        },
+      });
+      if (linked === 0) {
+        throw new ForbiddenException(
+          'Você só pode gerenciar mensalidades de matrículas das suas turmas',
+        );
+      }
+    }
+  }
+
+  async create(
+    user: AuthenticatedUser,
+    dto: CreatePaymentDto,
+  ): Promise<PaymentEntity> {
+    await this.assertCanManage(user, dto.enrollmentId);
     return this.paymentsRepository.create(dto);
   }
 
@@ -31,9 +65,7 @@ export class PaymentsService {
     return this.paymentsRepository.findByEnrollmentId(enrollmentId);
   }
 
-  async findByEnrollmentIds(
-    enrollmentIds: string[],
-  ): Promise<PaymentEntity[]> {
+  async findByEnrollmentIds(enrollmentIds: string[]): Promise<PaymentEntity[]> {
     return this.paymentsRepository.findByEnrollmentIds(enrollmentIds);
   }
 
@@ -45,12 +77,40 @@ export class PaymentsService {
     return payment;
   }
 
-  async update(id: string, dto: UpdatePaymentDto): Promise<PaymentEntity> {
-    const payment = await this.paymentsRepository.update(id, dto);
-    if (!payment) {
+  async update(
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdatePaymentDto,
+  ): Promise<PaymentEntity> {
+    const payment = await this.findOne(id);
+    await this.assertCanManage(user, payment.enrollmentId);
+
+    const updated = await this.paymentsRepository.update(id, dto);
+    if (!updated) {
       throw new NotFoundException('Pagamento não encontrado');
     }
-    return payment;
+    return updated;
+  }
+
+  /**
+   * Gera mensalidades pendentes para o mês informado (padrão: mês corrente)
+   * para todas as matrículas ATIVAS. Idempotente.
+   */
+  async generateMonthlyPayments(
+    month?: string,
+  ): Promise<{ month: string; created: number }> {
+    const target = month ?? currentMonth();
+    const created = await generatePendingMonthlyPayments(this.prisma, target);
+    return { month: target, created };
+  }
+
+  /** Endpoint manual: gera mensalidades do mês (ADMIN ou instrutor). */
+  async generateMonthlyPaymentsFor(
+    user: AuthenticatedUser,
+    month?: string,
+  ): Promise<{ month: string; created: number }> {
+    await assertAdminOrInstructor(this.prisma.class, user);
+    return this.generateMonthlyPayments(month);
   }
 
   /**
@@ -58,10 +118,7 @@ export class PaymentsService {
    * ADMIN confirma qualquer pagamento; instrutor só confirma pagamentos
    * de matrículas vinculadas às próprias turmas.
    */
-  async confirmAs(
-    user: AuthenticatedUser,
-    id: string,
-  ): Promise<PaymentEntity> {
+  async confirmAs(user: AuthenticatedUser, id: string): Promise<PaymentEntity> {
     const payment = await this.paymentsRepository.findById(id);
     if (!payment) {
       throw new NotFoundException('Pagamento não encontrado');

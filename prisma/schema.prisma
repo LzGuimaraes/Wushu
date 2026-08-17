@@ -102,7 +102,7 @@ model StudentProfile {
   id String @id @default(uuid())
 
   userId String @unique @map("user_id")
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   cpf       String    @unique
   birthDate DateTime? @map("birth_date") @db.Date
@@ -141,7 +141,7 @@ model MedicalRecord {
   id String @id @default(uuid())
 
   studentProfileId String         @unique @map("student_profile_id")
-  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
   hasDisease         Boolean @default(false) @map("has_disease")
   diseaseDescription String? @map("disease_description")
@@ -168,7 +168,7 @@ model Guardian {
   id String @id @default(uuid())
 
   studentProfileId String         @map("student_profile_id")
-  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
   name  String
   cpf   String
@@ -186,7 +186,7 @@ model BeltHistory {
   id String @id @default(uuid())
 
   studentProfileId String         @map("student_profile_id")
-  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
   belt String
 
@@ -203,7 +203,7 @@ model Enrollment {
   id String @id @default(uuid())
 
   studentId String         @map("student_id")
-  student   StudentProfile @relation(fields: [studentId], references: [id])
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   enrollmentNumber String @unique @map("enrollment_number")
 
@@ -248,10 +248,10 @@ model StudentClass {
   id String @id @default(uuid())
 
   enrollmentId String     @map("enrollment_id")
-  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   classId String @map("class_id")
-  class   Class  @relation(fields: [classId], references: [id])
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -264,10 +264,10 @@ model Attendance {
   id String @id @default(uuid())
 
   enrollmentId String     @map("enrollment_id")
-  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   classId String @map("class_id")
-  class   Class  @relation(fields: [classId], references: [id])
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   attendanceDate DateTime @map("attendance_date") @db.Date
 
@@ -284,7 +284,7 @@ model Payment {
   id String @id @default(uuid())
 
   enrollmentId String     @map("enrollment_id")
-  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   amount Decimal @db.Decimal(10, 2)
 
@@ -309,7 +309,7 @@ model Notification {
   id String @id @default(uuid())
 
   userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   type NotificationType
 

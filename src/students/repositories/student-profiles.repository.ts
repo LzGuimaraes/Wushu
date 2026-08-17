@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, StudentProfile } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
@@ -13,7 +13,7 @@ export class StudentProfilesRepository {
 
   async create(data: CreateStudentProfileDto): Promise<StudentProfileEntity> {
     const profile = await this.prisma.studentProfile.create({
-      data: data as unknown as Prisma.StudentProfileUncheckedCreateInput,
+      data: data,
     });
     return this.toEntity(profile);
   }
@@ -44,7 +44,7 @@ export class StudentProfilesRepository {
     try {
       const profile = await this.prisma.studentProfile.update({
         where: { id },
-        data: data as unknown as Prisma.StudentProfileUncheckedUpdateInput,
+        data: data,
       });
       return this.toEntity(profile);
     } catch (error) {
@@ -55,13 +55,36 @@ export class StudentProfilesRepository {
     }
   }
 
+  /**
+   * Exclui o aluno e todos os registros dele (cascade no banco):
+   * perfil, prontuário, responsáveis, faixas, matrículas, pagamentos,
+   * frequências, vínculos com turmas e notificações.
+   * A exclusão é feita pelo usuário para acionar o cascade de todas as FK.
+   */
   async remove(id: string): Promise<void> {
+    const profile = await this.prisma.studentProfile.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!profile) {
+      return;
+    }
+
     try {
-      await this.prisma.studentProfile.delete({ where: { id } });
+      await this.prisma.user.delete({ where: { id: profile.userId } });
     } catch (error) {
-      if (!isRecordNotFoundError(error)) {
-        throw error;
+      if (isRecordNotFoundError(error)) {
+        return;
       }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Não é possível excluir este usuário: ele é instrutor de turmas. Reatribua as turmas antes de excluir.',
+        );
+      }
+      throw error;
     }
   }
 

@@ -12,7 +12,9 @@ import { UpdateClassDto } from '../dto/update-class.dto';
 export class ClassesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateClassDto): Promise<ClassEntity> {
+  async create(
+    data: CreateClassDto & { instructorId: string },
+  ): Promise<ClassEntity> {
     const classRecord = await this.prisma.class.create({ data });
     return this.toClassEntity(classRecord);
   }

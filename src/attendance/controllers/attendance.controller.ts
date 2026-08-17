@@ -12,7 +12,9 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { AttendanceService } from '../services/attendance.service';
 import { CreateAttendanceDto } from '../dto/create-attendance.dto';
 import { UpdateAttendanceDto } from '../dto/update-attendance.dto';
@@ -23,9 +25,12 @@ export class AttendanceController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  create(@Body() dto: CreateAttendanceDto) {
-    return this.attendanceService.create(dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateAttendanceDto,
+  ) {
+    return this.attendanceService.createAs(user, dto);
   }
 
   @Get()
@@ -48,9 +53,13 @@ export class AttendanceController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto) {
-    return this.attendanceService.update(id, dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateAttendanceDto,
+  ) {
+    return this.attendanceService.updateAs(user, id, dto);
   }
 
   @Delete(':id')

@@ -12,7 +12,9 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { ClassesService } from '../services/classes.service';
 import { CreateClassDto } from '../dto/create-class.dto';
 import { UpdateClassDto } from '../dto/update-class.dto';
@@ -24,9 +26,9 @@ export class ClassesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  create(@Body() dto: CreateClassDto) {
-    return this.classesService.create(dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateClassDto) {
+    return this.classesService.create(user, dto);
   }
 
   @Get()
@@ -43,23 +45,31 @@ export class ClassesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateClassDto) {
-    return this.classesService.update(id, dto);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateClassDto,
+  ) {
+    return this.classesService.update(user, id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.classesService.remove(id);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.classesService.remove(user, id);
   }
 
   @Post(':id/students')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  addStudent(@Param('id') id: string, @Body() dto: EnrollStudentDto) {
-    return this.classesService.addStudent(id, dto.enrollmentId);
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  addStudent(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: EnrollStudentDto,
+  ) {
+    return this.classesService.addStudent(user, id, dto.enrollmentId);
   }
 
   @Get(':id/students')
@@ -70,11 +80,12 @@ export class ClassesController {
 
   @Delete(':id/students/:enrollmentId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
   removeStudent(
     @Param('id') id: string,
     @Param('enrollmentId') enrollmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.classesService.removeStudent(id, enrollmentId);
+    return this.classesService.removeStudent(user, id, enrollmentId);
   }
 }
