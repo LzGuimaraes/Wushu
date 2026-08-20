@@ -1,5 +1,6 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Delete,
   ForbiddenException,
@@ -9,6 +10,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -23,6 +25,7 @@ import { CompleteStudentProfileDto } from '../dto/complete-student-profile.dto';
 import { UpdateStudentProfileDto } from '../dto/update-student-profile.dto';
 
 @Controller('students')
+@UseInterceptors(ClassSerializerInterceptor)
 export class StudentProfilesController {
   constructor(
     private readonly studentProfilesService: StudentProfilesService,

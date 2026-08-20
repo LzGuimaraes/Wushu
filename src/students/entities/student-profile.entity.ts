@@ -1,9 +1,16 @@
+import { Transform } from 'class-transformer';
 import { StudentGoal } from '../../common/enums/student-goal.enum';
+
+/** Serializa uma data UTC apenas como YYYY-MM-DD, evitando ambiguidade de fuso. */
+const toDateOnly = ({ value }: { value: Date | null }): string | null =>
+  value ? value.toISOString().slice(0, 10) : null;
 
 export class StudentProfileEntity {
   id: string;
   userId: string;
   cpf: string;
+  /** Retornado como YYYY-MM-DD na API (input type="date" do front). */
+  @Transform(toDateOnly)
   birthDate: Date | null;
   phone: string;
   responsiblePhone: string | null;
