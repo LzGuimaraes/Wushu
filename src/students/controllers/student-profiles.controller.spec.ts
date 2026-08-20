@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 
 import { StudentProfilesController } from './student-profiles.controller';
+import { MedicalRecordsController } from './medical-records.controller';
 import { StudentProfilesService } from '../services/student-profiles.service';
+import { MedicalRecordsService } from '../services/medical-records.service';
 import { StudentProfileEntity } from '../entities/student-profile.entity';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 
@@ -74,5 +76,40 @@ describe('StudentProfilesController (IDOR protection)', () => {
     const result = await controller.update('profile-1', admin, dto as never);
     expect(serviceMock.update).toHaveBeenCalledWith('profile-1', dto);
     expect(result).toEqual(profile);
+  });
+});
+
+describe('MedicalRecordsController (student self-service)', () => {
+  it('permite que o aluno envie a sua própria ficha médica após a aprovação', async () => {
+    const serviceMock = {
+      upsert: jest.fn().mockResolvedValue({ id: 'record-1' }),
+      findByStudentProfileId: jest.fn().mockResolvedValue({ id: 'record-1' }),
+    };
+
+    const studentProfilesService = {
+      findByUserId: jest.fn().mockResolvedValue({ id: 'profile-1' }),
+    };
+
+    const controller = new MedicalRecordsController(
+      serviceMock as never,
+      studentProfilesService as never,
+    );
+
+    const user: AuthenticatedUser = {
+      userId: 'student-1',
+      email: 'student@example.com',
+      role: 'STUDENT',
+    };
+
+    await controller.upsertMy(user, {
+      hasDisease: true,
+      diseaseDescription: 'Asma leve',
+    });
+
+    expect(studentProfilesService.findByUserId).toHaveBeenCalledWith('student-1');
+    expect(serviceMock.upsert).toHaveBeenCalledWith('profile-1', {
+      hasDisease: true,
+      diseaseDescription: 'Asma leve',
+    });
   });
 });

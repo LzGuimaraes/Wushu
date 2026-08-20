@@ -13,6 +13,14 @@ export class GuardiansService {
     return this.guardiansRepository.create(dto);
   }
 
+  async findOne(id: string): Promise<GuardianEntity> {
+    const guardian = await this.guardiansRepository.findById(id);
+    if (!guardian) {
+      throw new NotFoundException('Responsável não encontrado');
+    }
+    return guardian;
+  }
+
   async findAllByStudentProfileId(
     studentProfileId: string,
   ): Promise<GuardianEntity[]> {

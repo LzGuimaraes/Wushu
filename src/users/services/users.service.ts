@@ -115,7 +115,7 @@ export class UsersService {
       user.id,
       NotificationType.ENROLLMENT_APPROVED,
       'Sua matrícula foi aprovada!',
-      'Sua conta foi aprovada pelo professor. Agora você já pode acessar o portal do aluno.',
+      'Sua conta foi aprovada pela escola. Agora você já pode acessar o portal do aluno.',
     );
     return user;
   }
@@ -152,7 +152,7 @@ export class UsersService {
           user.id,
           NotificationType.ENROLLMENT_APPROVED,
           'Sua matrícula foi aprovada!',
-          'Sua conta foi aprovada pelo professor. Agora você já pode acessar o portal do aluno.',
+          'Sua conta foi aprovada pela escola. Agora você já pode acessar o portal do aluno.',
         ),
       ),
     );

@@ -16,6 +16,11 @@ export class GuardiansRepository {
     return this.toEntity(guardian);
   }
 
+  async findById(id: string): Promise<GuardianEntity | null> {
+    const guardian = await this.prisma.guardian.findUnique({ where: { id } });
+    return guardian ? this.toEntity(guardian) : null;
+  }
+
   async findAllByStudentProfileId(
     studentProfileId: string,
   ): Promise<GuardianEntity[]> {

@@ -1,0 +1,18 @@
+flowchart LR
+A[Usuário: Cadastro] --> B[Aguardando aprovação]
+B -->|Aprovado| C[Completar perfil]
+C --> D[Matrícula criada (instrutor/admin)]
+D --> E[Matrícula ATIVA]
+E --> F[Gerador mensal: cria Mensalidade (PENDENTE)]
+F --> G[Aluno vê em Meus Pagamentos]
+G --> H[Aluno/Instrutor envia comprovante / Admin confirma]
+H --> I[Pagamento marcado como PAGO]
+
+D --> J[Turma criada]
+J --> K[Instrutor adiciona alunos]
+K --> L[Registro de presença por instrutor]
+
+M[Admin/Instrutor] -->|Exportar| N[Relatório em PDF]
+
+O[Excluir aluno] --> P[Deleta usuário]
+P -->|Cascade| Q[Remover matrículas, pagamentos, presenças e registros relacionados]
