@@ -20,6 +20,7 @@ import type { AuthenticatedUser } from '../../common/interfaces/authenticated-us
 import { StudentProfilesService } from '../services/student-profiles.service';
 import { GuardiansService } from '../services/guardians.service';
 import { CreateGuardianDto } from '../dto/create-guardian.dto';
+import { CreateMyGuardianDto } from '../dto/create-my-guardian.dto';
 import { UpdateGuardianDto } from '../dto/update-guardian.dto';
 
 @Controller('guardians')
@@ -40,7 +41,7 @@ export class GuardiansController {
   @UseGuards(JwtAuthGuard)
   async createMy(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateGuardianDto,
+    @Body() dto: CreateMyGuardianDto,
   ) {
     const profile = await this.studentProfilesService.findByUserId(user.userId);
     return this.guardiansService.create({
