@@ -31,7 +31,17 @@ export class MailService {
     link: string,
   ): Promise<void> {
     const subject = 'Confirme seu e-mail';
-    const html = `<p>Olá, ${name}!</p><p>Confirme seu e-mail clicando no link abaixo:</p><p><a href="${link}">${link}</a></p>`;
+    const html = `
+      <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#111">
+        <p>Olá, ${name}!</p>
+        <p>Confirme seu e-mail clicando no botão abaixo:</p>
+        <p>
+          <a href="${link}" style="display:inline-block;padding:12px 20px;background:#1a73e8;color:#fff;border-radius:6px;text-decoration:none;">Confirmar e-mail</a>
+        </p>
+        <p>Se o botão não funcionar, copie e cole este link no navegador:</p>
+        <p><a href="${link}">${link}</a></p>
+      </div>
+    `;
 
     if (!this.transporter) {
       // Fallback de desenvolvimento: SMTP não configurado.
