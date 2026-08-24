@@ -12,11 +12,13 @@ import {
   UserEntity,
   toPublicUser,
 } from '../users/entities/user.entity';
+import { UpdateUserDto } from '../users/dto/update-user.dto';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../common/enums/notification-type.enum';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 interface ConfirmationPayload {
   sub: string;
@@ -26,6 +28,7 @@ interface ConfirmationPayload {
 @Injectable()
 export class AuthService {
   private readonly appUrl: string;
+  private readonly frontendUrl: string;
 
   constructor(
     private readonly usersService: UsersService,
@@ -34,6 +37,11 @@ export class AuthService {
     private readonly notificationsService: NotificationsService,
   ) {
     this.appUrl = process.env.APP_URL ?? 'http://localhost:3000';
+    this.frontendUrl =
+      process.env.DOMAIN_WEB ??
+      process.env.FRONTEND_URL ??
+      process.env.APP_URL ??
+      'http://localhost:3000';
   }
 
   async login(
@@ -107,6 +115,74 @@ export class AuthService {
     };
   }
 
+  /**
+   * Envia o e-mail com o link para redefinir a senha.
+   * A resposta é genérica para não revelar quais e-mails estão cadastrados.
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.usersService.findByEmail(email);
+    if (user) {
+      await this.sendPasswordResetEmail(user);
+    }
+    return {
+      message:
+        'Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.',
+    };
+  }
+
+  /** Verifica se o token de redefinição é válido (sem consumi-lo). */
+  async validateResetToken(token: string): Promise<{ valid: boolean }> {
+    try {
+      const payload =
+        await this.jwtService.verifyAsync<ConfirmationPayload>(token);
+      if (payload.purpose !== 'password-reset' || !payload.sub) {
+        return { valid: false };
+      }
+      const user = await this.usersService.findById(payload.sub);
+      return { valid: !!user };
+    } catch {
+      return { valid: false };
+    }
+  }
+
+  /** Redefine a senha a partir do token enviado por e-mail. */
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('A confirmação da nova senha não confere');
+    }
+
+    let payload: ConfirmationPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<ConfirmationPayload>(
+        dto.token,
+      );
+    } catch {
+      throw new BadRequestException('Link inválido ou expirado');
+    }
+
+    if (payload.purpose !== 'password-reset' || !payload.sub) {
+      throw new BadRequestException('Link inválido ou expirado');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) {
+      throw new BadRequestException('Usuário não encontrado');
+    }
+
+    // `UsersService.update` já aplica o bcrypt na senha — não podemos
+    // pré-hashear aqui, senão a senha ficaria com hash duplo e o login falharia.
+    const data: UpdateUserDto = { password: dto.password };
+    await this.usersService.update(user.id, data);
+    await this.notificationsService.create(
+      user.id,
+      NotificationType.PASSWORD_RESET,
+      'Sua senha foi alterada',
+      'Sua senha foi redefinida com sucesso. Caso não tenha sido você, entre em contato com a escola.',
+    );
+
+    return { message: 'Senha redefinida com sucesso.' };
+  }
+
   private async sendConfirmationEmail(user: UserEntity): Promise<void> {
     const token = await this.jwtService.signAsync(
       { sub: user.id, purpose: 'email-confirmation' },
@@ -114,5 +190,14 @@ export class AuthService {
     );
     const link = `${this.appUrl}/auth/confirm-email?token=${token}`;
     await this.mailService.sendConfirmationEmail(user.email, user.name, link);
+  }
+
+  private async sendPasswordResetEmail(user: UserEntity): Promise<void> {
+    const token = await this.jwtService.signAsync(
+      { sub: user.id, purpose: 'password-reset' },
+      { expiresIn: '1h' },
+    );
+    const link = `${this.frontendUrl}/redefinir-senha?token=${token}`;
+    await this.mailService.sendPasswordResetEmail(user.email, user.name, link);
   }
 }
