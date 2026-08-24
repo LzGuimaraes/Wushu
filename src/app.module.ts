@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma/prisma.module';
@@ -15,6 +16,9 @@ import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
+    // Carrega o .env no runtime (sem sobrescrever variáveis já existentes),
+    // garantindo que DOMAIN_WEB/APP_URL etc. estejam disponíveis no `npm run start`.
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     UsersModule,
     AuthModule,

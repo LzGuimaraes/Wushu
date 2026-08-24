@@ -56,6 +56,9 @@ jobs:
             SMTP_PASS=${{ secrets.SMTP_PASS }}
             MAIL_FROM=${{ secrets.MAIL_FROM }}
             APP_URL=${{ secrets.APP_URL }}
+            # URL pública do frontend — usada nos links dos e-mails
+            # (redefinição de senha, confirmação etc.). Mesma variável do deploy do frontend.
+            DOMAIN_WEB=${{ vars.DOMAIN_WEB }}
             EOF
 
             echo "==> [2/4] Baixando a imagem"

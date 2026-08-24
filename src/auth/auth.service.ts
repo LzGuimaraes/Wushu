@@ -42,6 +42,17 @@ export class AuthService {
       process.env.FRONTEND_URL ??
       process.env.APP_URL ??
       'http://localhost:3000';
+
+    if (!process.env.DOMAIN_WEB && !process.env.FRONTEND_URL) {
+      // Sem DOMAIN_WEB/FRONTEND_URL, o link do e-mail aponta para o próprio
+      // backend e quebra (404) ao ser aberto. Deixar isso visível evita
+      // redefinições de senha quebradas em produção.
+      console.warn(
+        `[auth] DOMAIN_WEB/FRONTEND_URL não configurados — links de e-mail ` +
+          `(redefinição de senha etc.) apontarão para o backend (${this.frontendUrl}) ` +
+          `e não para o frontend. Configure DOMAIN_WEB com a URL pública do frontend.`,
+      );
+    }
   }
 
   async login(
