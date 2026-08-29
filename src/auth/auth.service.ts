@@ -27,7 +27,6 @@ interface ConfirmationPayload {
 
 @Injectable()
 export class AuthService {
-  private readonly appUrl: string;
   private readonly frontendUrl: string;
 
   constructor(
@@ -36,7 +35,6 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
   ) {
-    this.appUrl = process.env.APP_URL ?? 'http://localhost:3000';
     this.frontendUrl =
       process.env.DOMAIN_WEB ??
       process.env.FRONTEND_URL ??
@@ -87,7 +85,8 @@ export class AuthService {
     return {
       accessToken: await this.jwtService.signAsync(payload),
       user: toPublicUser(user),
-      message: 'Conta criada. Aguardando aprovação do professor.',
+      message:
+        'Conta criada! Enviamos um link de confirmação para o seu e-mail. Aguardando a aprovação do professor.',
     };
   }
 
@@ -199,7 +198,7 @@ export class AuthService {
       { sub: user.id, purpose: 'email-confirmation' },
       { expiresIn: '24h' },
     );
-    const link = `${this.appUrl}/auth/confirm-email?token=${token}`;
+    const link = `${this.frontendUrl}/confirmar-email?token=${token}`;
     await this.mailService.sendConfirmationEmail(user.email, user.name, link);
   }
 

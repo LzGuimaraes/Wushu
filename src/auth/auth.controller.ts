@@ -1,5 +1,4 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -23,14 +22,15 @@ export class AuthController {
   }
 
   @Get('confirm-email')
-  async confirmEmail(@Query('token') token: string, @Res() res: Response) {
-    const frontendUrl = process.env.DOMAIN_WEB ?? process.env.FRONTEND_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
+  async confirmEmail(@Query('token') token: string) {
     try {
-      await this.authService.confirmEmail(token ?? '');
-      return res.redirect(`${frontendUrl}/login?confirmed=1`);
+      const { message } = await this.authService.confirmEmail(token ?? '');
+      return { valid: true, message };
     } catch (err: any) {
-      const reason = encodeURIComponent(err?.message ?? 'invalid_token');
-      return res.redirect(`${frontendUrl}/login?confirmed=0&reason=${reason}`);
+      return {
+        valid: false,
+        message: err?.message ?? 'Token inválido ou expirado',
+      };
     }
   }
 
