@@ -1,98 +1,110 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Kung Fu Manager API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST do **Kung Fu Manager** — sistema de gestão de uma escola de Kung Fu (Wushu): alunos, matrículas, turmas, frequência, mensalidades, notificações e aprovação de cadastros.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- **NestJS 11** (TypeScript)
+- **Prisma 6** + **PostgreSQL**
+- **JWT** (access token + refresh token) com `passport-jwt`
+- **bcrypt**, **nodemailer** (e-mails transacionais) e **pdfkit** (relatórios em PDF)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requisitos
 
-## Project setup
+- Node.js 22+
+- PostgreSQL (banco `wushu`)
+
+## Configuração
+
+1. Instale as dependências:
+
+   ```bash
+   npm install
+   ```
+
+2. Crie o `.env` a partir do exemplo:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Aplique as migrações e gere o Prisma Client:
+
+   ```bash
+   npx prisma migrate dev
+   ```
+
+4. Inicie o servidor em modo de desenvolvimento:
+
+   ```bash
+   npm run start:dev
+   ```
+
+A API sobe em `http://localhost:3000` por padrão.
+
+## Variáveis de ambiente
+
+| Variável | Obrigatória | Descrição |
+| --- | --- | --- |
+| `PORT` | Não | Porta do servidor (padrão `3000`) |
+| `DATABASE_URL` | Sim | URL de conexão do PostgreSQL |
+| `JWT_SECRET` | Sim | Segredo do access token |
+| `JWT_REFRESH_SECRET` | Não | Segredo do refresh token (fallback: `JWT_SECRET`) |
+| `DOMAIN_WEB` | Sim (prod) | URL pública do frontend (usada nos links de e-mail) |
+| `FRONTEND_URL` | Não | Alternativa a `DOMAIN_WEB` |
+| `APP_URL` | Não | URL da própria API (fallback dos links de e-mail) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Não | Credenciais SMTP (sem `SMTP_HOST`, os links são logados no console) |
+| `MAIL_FROM` | Não | Remetente dos e-mails |
+| `DEFAULT_MONTHLY_FEE` | Não | Valor padrão das mensalidades |
+| `PAYMENT_DUE_DAY` | Não | Dia de vencimento padrão das mensalidades (padrão `10`) |
+
+## Scripts
+
+| Comando | Descrição |
+| --- | --- |
+| `npm run build` | Compila o projeto (`dist/`) |
+| `npm run start:dev` | Inicia em modo watch |
+| `npm run start:prod` | Inicia a versão compilada |
+| `npm run test` | Roda os testes unitários |
+| `npm run test:e2e` | Roda os testes e2e |
+| `npm run lint` | Roda o ESLint |
+
+> Em produção, após `npm run build`, o entrypoint é `node dist/src/main.js` (o `prisma.config.ts` na raiz desloca o `rootDir`).
+
+## Banco de dados (Prisma)
 
 ```bash
-$ npm install
+npx prisma migrate dev --name <nome>   # cria/aplica migração e regenera o client
+npx prisma studio                       # abre o Prisma Studio
+npx prisma format && npx prisma validate
 ```
 
-## Compile and run the project
+## Estrutura
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+src/
+├── auth/          # login, cadastro, refresh token, confirmação de e-mail, reset de senha
+├── users/         # usuários e aprovação de cadastros
+├── students/      # perfis de aluno, responsáveis, histórico de faixas, registros médicos
+├── enrollments/   # matrículas
+├── classes/       # turmas e alunos por turma
+├── attendance/    # frequência
+├── payments/      # mensalidades e scheduler de cobrança
+├── notifications/ # notificações internas
+├── admin/         # dashboard e relatórios (CSV/PDF)
+├── public/        # endpoints públicos (landing)
+├── mail/          # envio de e-mails transacionais
+├── common/        # guards, enums, filters, decorators, utils
+└── config/        # origens permitidas (CORS / guarda de origem)
 ```
 
-## Run tests
+## Autenticação
 
-```bash
-# unit tests
-$ npm run test
+- **Access token** (15 min) + **refresh token** (7 dias) com rotação via `POST /auth/refresh`.
+- Endpoints públicos: `POST /auth/login`, `POST /auth/register`, `POST /auth/refresh`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/reset-password/validate`, `GET /auth/confirm-email`, `POST /auth/resend-confirmation`.
+- O cadastro (`POST /auth/register`) é restrito ao frontend oficial via `Origin`/`Referer` (`FrontendOriginGuard`).
 
-# e2e tests
-$ npm run test:e2e
+## Licença
 
-# test coverage
-$ npm run test:cov
-```
+Projeto privado (UNLICENSED).
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
