@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -6,6 +6,8 @@ import { RegisterDto } from './dto/register.dto';
 import { ResendConfirmationDto } from './dto/resend-confirmation.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { FrontendOriginGuard } from '../common/guards/frontend-origin.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -16,9 +18,15 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @UseGuards(FrontendOriginGuard)
   @Post('register')
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+
+  @Post('refresh')
+  refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refresh(refreshTokenDto.refreshToken);
   }
 
   @Get('confirm-email')

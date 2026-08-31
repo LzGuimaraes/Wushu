@@ -25,9 +25,18 @@ interface ConfirmationPayload {
   purpose: string;
 }
 
+interface RefreshPayload {
+  sub: string;
+  purpose: string;
+}
+
+/** Duração do refresh token (sessão "lembrada" máxima). */
+const REFRESH_TOKEN_TTL = '7d';
+
 @Injectable()
 export class AuthService {
   private readonly frontendUrl: string;
+  private readonly refreshSecret: string;
 
   constructor(
     private readonly usersService: UsersService,
@@ -41,6 +50,11 @@ export class AuthService {
       process.env.APP_URL ??
       'http://localhost:3000';
 
+    this.refreshSecret =
+      process.env.JWT_REFRESH_SECRET ??
+      process.env.JWT_SECRET ??
+      'dev-secret';
+
     if (!process.env.DOMAIN_WEB && !process.env.FRONTEND_URL) {
       // Sem DOMAIN_WEB/FRONTEND_URL, o link do e-mail aponta para o próprio
       // backend e quebra (404) ao ser aberto. Deixar isso visível evita
@@ -53,26 +67,31 @@ export class AuthService {
     }
   }
 
-  async login(
-    dto: LoginDto,
-  ): Promise<{ accessToken: string; user: PublicUser }> {
+  async login(dto: LoginDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: PublicUser;
+  }> {
     const user = await this.usersService.findByEmail(dto.email);
 
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
-
     return {
-      accessToken: await this.jwtService.signAsync(payload),
+      ...(await this.signTokens(user)),
       user: toPublicUser(user),
     };
   }
 
   async register(
     dto: RegisterDto,
-  ): Promise<{ accessToken: string; user: PublicUser; message: string }> {
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: PublicUser;
+    message: string;
+  }> {
     const user = await this.usersService.create(dto);
     await this.sendConfirmationEmail(user);
     await this.notificationsService.notifyAdmins(
@@ -81,9 +100,8 @@ export class AuthService {
       `O aluno "${user.name}" (${user.email}) se cadastrou e aguarda sua aprovação.`,
     );
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
     return {
-      accessToken: await this.jwtService.signAsync(payload),
+      ...(await this.signTokens(user)),
       user: toPublicUser(user),
       message:
         'Conta criada! Enviamos um link de confirmação para o seu e-mail. Aguardando a aprovação do professor.',
@@ -191,6 +209,60 @@ export class AuthService {
     );
 
     return { message: 'Senha redefinida com sucesso.' };
+  }
+
+  /**
+   * Emite um novo par de tokens a partir de um refresh token válido
+   * (rotação: o refresh antigo deixa de ser usável quando o novo é emitido
+   * pelo cliente).
+   */
+  async refresh(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: PublicUser;
+  }> {
+    let payload: RefreshPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<RefreshPayload>(
+        refreshToken,
+        { secret: this.refreshSecret },
+      );
+    } catch {
+      throw new UnauthorizedException('Sessão expirada. Entre novamente.');
+    }
+
+    if (payload.purpose !== 'refresh' || !payload.sub) {
+      throw new UnauthorizedException('Sessão inválida. Entre novamente.');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('Usuário não encontrado');
+    }
+
+    return {
+      ...(await this.signTokens(user)),
+      user: toPublicUser(user),
+    };
+  }
+
+  /** Gera o access token (curto) e o refresh token (longo) de um usuário. */
+  private async signTokens(user: UserEntity): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const accessPayload = { sub: user.id, email: user.email, role: user.role };
+    const refreshPayload = { sub: user.id, purpose: 'refresh' };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(accessPayload),
+      this.jwtService.signAsync(refreshPayload, {
+        secret: this.refreshSecret,
+        expiresIn: REFRESH_TOKEN_TTL,
+      }),
+    ]);
+
+    return { accessToken, refreshToken };
   }
 
   private async sendConfirmationEmail(user: UserEntity): Promise<void> {

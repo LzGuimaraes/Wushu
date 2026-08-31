@@ -8,6 +8,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { FrontendOriginGuard } from '../common/guards/frontend-origin.guard';
 
 @Module({
   imports: [
@@ -17,10 +18,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET ?? 'dev-secret',
-      signOptions: { expiresIn: '7d' },
+      // Token de acesso de curta duração; a sessão é mantida via refresh token.
+      signOptions: { expiresIn: '15m' },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, FrontendOriginGuard],
 })
 export class AuthModule {}
